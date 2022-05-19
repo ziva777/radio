@@ -38,14 +38,14 @@
 #define D0_DDR      DDRA
 #define D0_PIN      PIN0
 
-#define ENC_A_PORT  PORTC
-#define ENC_A_DDR   DDRC
-#define ENC_A_PIN   PIN0
+#define ENC_A_PORT  PORTB
+#define ENC_A_DDR   DDRB
+#define ENC_A_PIN   PIN4
 
-#define ENC_B_PORT  PORTC
-#define ENC_B_DDR   DDRC
-#define ENC_B_PIN   PIN1
+#define ENC_B_PORT  PORTB
+#define ENC_B_DDR   DDRB
+#define ENC_B_PIN   PIN5
 
-#define ENC_BTN_PORT PORTC
-#define ENC_BTN_DDR  DDRC
-#define ENC_BTN_PIN  PIN2
+#define ENC_BTN_PORT PORTB
+#define ENC_BTN_DDR  DDRB
+#define ENC_BTN_PIN  PIN6
