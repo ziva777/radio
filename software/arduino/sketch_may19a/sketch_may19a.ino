@@ -24,7 +24,7 @@ static inline void vfd_send_byte(uint8_t b)
   cbi(WR_PORT, WR_PIN);
   D0_PORT = b;
   sbi(WR_PORT, WR_PIN);
-  _delay_us(42);
+  _delay_us(40);
 }
 
 static inline void vfd_prepare_send_bytes(uint16_t x, uint16_t size)
@@ -87,11 +87,11 @@ void setup()
 
 static uint16_t freq = 54321;
 static uint8_t freq_proc = 0;
-static uint8_t buf[1024];
+static uint8_t buf[2048];
 
 static void sync(void)
 {
-#define HALF_SCREEN (128 * 8)
+#define HALF_SCREEN (256 * 8)
   int i;
   uint8_t *ptr;
 
@@ -186,4 +186,5 @@ void loop()
   }
   print_buf(freq, freq_proc);
   sync();
+  delay(10);
 }

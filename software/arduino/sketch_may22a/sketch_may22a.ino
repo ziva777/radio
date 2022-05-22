@@ -1,3 +1,6 @@
+#include <SI4735.h>
+#include <Bounce2.h>
+
 #include "defines.h"
 #include "font.h"
 
@@ -7,62 +10,59 @@
 #define LOW_BYTE(b)     ((b) & 0xFF)
 #define HIGH_BYTE(b)    ((b) >> 8)
 
-static uint16_t freq = 54321;
+SI4735 rx;
+Bounce debouncer; 
+
+static uint32_t freq = 100000;
+static uint32_t freq_copy = 0;
 static uint8_t freq_proc = 0;
-static uint8_t buf[1024];
-static uint8_t encoder_pos;
-static uint8_t encoder_last_pos;
+static uint8_t buf[2048];
 
 static inline void encoder_setup(void)
 {
   sbi(ENC_A_PORT, ENC_A_PIN);
   cbi(ENC_A_DDR, ENC_A_PIN);
+  attachInterrupt(0, encoder_read, FALLING);
 
   sbi(ENC_B_PORT, ENC_B_PIN);
   cbi(ENC_B_DDR, ENC_B_PIN);
 
   sbi(ENC_BTN_PORT, ENC_BTN_PIN);
   cbi(ENC_BTN_DDR, ENC_BTN_PIN);
-
-  encoder_last_pos = digitalRead(ENC_A_PIN);
 }
 
-static inline void encoder_read(void)
+static uint8_t encoder_read_threshold = 0;
+static uint8_t encoder_step = 100;
+
+static void encoder_read(void)
 {
-#define FREQ_PROC_INC 100
-  encoder_pos = digitalRead(A0);
-  if (encoder_pos != encoder_last_pos)
-  {
-    if (encoder_pos != digitalRead(A1))
+    if (encoder_read_threshold++ % 2 == 0)
     {
-      freq_proc += FREQ_PROC_INC;
-      if (freq_proc == 100)
-      {
-        freq_proc = 0;
-        freq += 1;
-      }
-    }
-    else
-    {
-      if (freq_proc == 0)
-      {
-        freq_proc = 100 - FREQ_PROC_INC;
-        freq -= 1;
-      }
+      if (ENC_B_PINS & (1 << ENC_B_PIN))
+        freq += encoder_step;
       else
-        freq_proc -= FREQ_PROC_INC;
+        freq -= encoder_step;
     }
-    
-    encoder_last_pos = encoder_pos;
+}
+
+static void button_read(void)
+{
+  debouncer.update();
+  int value = debouncer.read();
+  if ( value == LOW ) {
+    encoder_step = 10;
+  } else {
+    encoder_step = 100;
   }
 }
 
 static inline void vfd_send_byte(uint8_t b)
-{ 
+{
+  while (!(RDY_PINS & (1 << RDY_PIN)));
+  
   cbi(WR_PORT, WR_PIN);
   D0_PORT = b;
   sbi(WR_PORT, WR_PIN);
-  _delay_us(42);
 }
 
 static inline void vfd_prepare_send_bytes(uint16_t x, uint16_t size)
@@ -107,7 +107,7 @@ static inline void vfd_setup(void)
     int x, n;
 
     x = 0;
-    n = 512 * 8;
+    n = 256 * 8;
     vfd_prepare_send_bytes(x, n);
 
     for (x = 0; x != n; ++x)
@@ -117,15 +117,56 @@ static inline void vfd_setup(void)
   }
 }
 
+static inline void si4735_setup(void)
+{
+#define RESET_PIN 8
+#define AM_FUNCTION 1
+#define FM_FUNCTION 0
+  //Serial.begin(9600);
+  //while(!Serial);
+
+  digitalWrite(RESET_PIN, HIGH);
+  int16_t si4735Addr = rx.getDeviceI2CAddress(RESET_PIN);
+  if ( si4735Addr == 0 ) {
+    //Serial.println("Si473X not found!");
+    //Serial.flush();
+    while (1);
+  } else {
+    //Serial.print("The SI473X / SI474X I2C address is 0x");
+    //Serial.println(si4735Addr, HEX);
+  }
+
+  delay(500);
+  //rx.setup(RESET_PIN, FM_FUNCTION);
+  //rx.setup(RESET_PIN, AM_FUNCTION);
+  // Starts defaul radio function and band (FM; from 84 to 108 MHz; 103.9 MHz; step 100kHz)
+  rx.setFM(6400, 12400, 9920, 10);
+  freq = rx.getFrequency();
+  freq *= 10;
+  freq_copy = freq;
+  rx.setVolume(63);
+  rx.setFrequencyStep(1);
+  //rx.setAutomaticGainControl(1, 0);
+//rx.setAM(150, 8000, 7095, 10);
+//      rx.setAvcAmMaxGain(48); // Sets the maximum gain for automatic volume control on AM mode.
+//      rx.setSeekAmLimits(520, 1750);
+//      rx.setVolume(63);
+//      rx.setSeekAmSpacing(10); // spacing 10kHz
+}
+
 void setup()
 {
   encoder_setup();
   vfd_setup();
+  si4735_setup();
+  digitalWrite(9, HIGH); // radio on/off input
+  debouncer.attach(ENC_BTN_ARDUINO_PIN);
+  debouncer.interval(5);
 }
 
 static inline void sync(void)
 {
-#define HALF_SCREEN (128 * 8)
+#define HALF_SCREEN (256 * 8)
   int i;
   uint8_t *ptr;
 
@@ -134,24 +175,26 @@ static inline void sync(void)
 
   for (i = 0; i != HALF_SCREEN; ++i)
   {
-    encoder_read();
     vfd_send_byte(*ptr++);
   }
 }
 
-static inline void print_buf(uint16_t v, uint8_t proc)
+static inline void print_buf(uint32_t v, uint8_t proc)
 {
   uint8_t         d;
   uint16_t        off;
   const uint8_t  *p;
-  uint16_t        i,
+  uint32_t        i,
                   j,
                   k;
 
   i = 0;
   off = font1_0_cols * font1_0_size;
 
-  for (k = 10000; k != 100; k /= 10)
+  i = 8 * (80);
+  off = font1_0_cols * font1_0_size;
+
+  for (k = 100000; k != 100; k /= 10)
   {
     d = (v / k) % 10;
     p = font_1_digits_data + off * d;
@@ -216,6 +259,12 @@ static inline void print_buf(uint16_t v, uint8_t proc)
 
 void loop()
 {
+  if (freq_copy != freq)
+  {
+    rx.setFrequency(freq / 10);
+    freq_copy = freq;
+  }
   print_buf(freq, freq_proc);
   sync();
+  button_read();
 }
