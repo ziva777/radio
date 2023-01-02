@@ -1,6 +1,8 @@
 #include <Bounce2.h>
 #include <SI4735.h>
 #include <util/atomic.h>
+#include <GyverEncoder.h>
+#include <TimerOne.h>
 
 #include "defines.h"
 #include "untitled.h"
@@ -12,6 +14,10 @@ SI4735 rx;
 Filter filter_pilot;
 Filter filter_rssi;
 Filter filter_snr;
+Encoder enc2(ENC2_A_ARDUINO_PIN,
+             ENC2_B_ARDUINO_PIN,
+             ENC2_BTN_ARDUINO_PIN);
+Bounce2::Button button = Bounce2::Button();
 
 static uint8_t enc_step = 100; /* kHz */
 static volatile uint32_t freq = 87000; /* kHz */
@@ -49,12 +55,45 @@ enc_setup(void)
 //  pinMode(LED_BUILTIN, OUTPUT);
 }
 
+static uint32_t enc2_cnt;
+
+void
+enc2_update(void)
+{
+  enc2.tick();
+
+  if (enc2.isTurn()) {
+    if (enc2.isRight())
+      ++enc2_cnt;
+    if (enc2.isLeft())
+      --enc2_cnt;
+  }
+}
+
 inline void
 buttons_setup(void)
 {
   pinMode(ENC_BTN_ARDUINO_PIN, INPUT_PULLUP);
   pinMode(BT1_BTN_ARDUINO_PIN, INPUT_PULLUP);
   pinMode(BT2_BTN_ARDUINO_PIN, INPUT_PULLUP);
+
+  pinMode(BT2_MUTE_ARDUINO_PIN, INPUT_PULLUP);
+//  pinMode(BT3_DIM_ARDUINO_PIN, INPUT_PULLUP);
+
+  pinMode(AMP_MUTE_ARDUINO_PIN, OUTPUT);
+  digitalWrite(AMP_MUTE_ARDUINO_PIN, LOW);
+  
+  pinMode(AMP_MODE_ARDUINO_PIN, OUTPUT);
+  digitalWrite(AMP_MODE_ARDUINO_PIN, LOW);
+  
+  enc2.setType(TYPE2);
+
+  Timer1.initialize(1000);
+  Timer1.attachInterrupt(enc2_update);
+
+  button.attach(BT3_DIM_ARDUINO_PIN, INPUT_PULLUP);
+  button.interval(5);
+  button.setPressedState(LOW); 
 }
 
 inline void radio_setup(void) {
@@ -70,14 +109,15 @@ inline void radio_setup(void) {
   delay(500);
   rx.setup(RESET_PIN, FM_FUNCTION);
   rx.setFM(8700, 10800, 8700, 10);
-  
+  rx.setAutomaticGainControl(0, 26);
   rx.setVolume(63);
 }
 
 void setup() {
+  buttons_setup();
   vfd_setup();
   enc_setup();
-  buttons_setup();
+  
   radio_setup();
   pinMode(LED_BUILTIN, OUTPUT);
   filter_pilot = FilterCreate(0.5, 0.5, 1);
@@ -127,32 +167,40 @@ void loop() {
     delta /= 100;
 
 #if 1
-    rx.setAutomaticGainControl(0, 26);
+   
+      
+  if (delta != 0) {
+    // Up
+    rx.setFrequency(f1 / 10);
+  } else {
+    // Down
+//    rx.setFrequency(f2 / 10);
+  }
 
-    if (delta / 10 > 0) {
-      rx.setFrequencyStep(100);
-      for (int32_t i = delta / 10; i != 0; --i) {
-        delta -= 10;
-        rx.frequencyUp();
-      }
-    } else if (delta / 10 < 0) {
-      rx.setFrequencyStep(100);
-      for (int32_t i = delta / 10; i != 0; ++i) {
-        delta += 10;
-        rx.frequencyDown();
-      }
-    }
+//    if (delta / 10 > 0) {
+//      rx.setFrequencyStep(100);
+//      for (int32_t i = delta / 10; i != 0; --i) {
+//        delta -= 10;
+//        rx.frequencyUp();
+//      }
+//    } else if (delta / 10 < 0) {
+//      rx.setFrequencyStep(100);
+//      for (int32_t i = delta / 10; i != 0; ++i) {
+//        delta += 10;
+//        rx.frequencyDown();
+//      }
+//    }
+//
+//    rx.setFrequencyStep(10);
+//
+//    if (delta > 0)
+//      for (int32_t i = delta; i != 0; --i)
+//        rx.frequencyUp();
+//    else
+//      for (int32_t i = delta; i != 0; ++i)
+//        rx.frequencyDown();
 
-    rx.setFrequencyStep(10);
-
-    if (delta > 0)
-      for (int32_t i = delta; i != 0; --i)
-        rx.frequencyUp();
-    else
-      for (int32_t i = delta; i != 0; ++i)
-        rx.frequencyDown();
-
-    rx.setAutomaticGainControl(1, 26);
+//    rx.setAutomaticGainControl(1, 26);
 #endif
   }
 
@@ -161,6 +209,10 @@ void loop() {
   f /= 100;
 
   vfd_load(untitled_raw);
+
+  {
+    font_write(&font_hw_sign, 0,  8,  f2 / 10);
+  }
 
 #define SCALE_BEGIN 22
   for (int i = 5; i != 8; ++i) {
@@ -193,7 +245,7 @@ void loop() {
   
   //font_write(&FONT_5x5,     0,  0, "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ");
   //font_write(&font_hw_sign, 0,  8, "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ");
-  font_write(&font_hw_sign, 0,  8,  snr);
+  //font_write(&font_hw_sign, 0,  8,  snr);
   font_write(&font_hw_sign, 0,  16, rssi);
   //font_write(&font_dot16,   16, 24, f1 / 1000);
   //font_write(&font_dot11,   16 + 9 * 3, 28, (f1/100) % 10);
@@ -226,7 +278,7 @@ void loop() {
     
     if (++bar_counter % 8 == 0) {
       for (int i = 0; i < 16; ++i)
-        bar2[i] = random('0', '0' + 16);
+        bar2[i] = random('0' + 1, '0' + 16);
     }
   
     bar2[16] = '\0';
@@ -235,6 +287,7 @@ void loop() {
 
   {
     int res;
+    static int res1, res2;
     
     res = digitalRead(BT1_BTN_ARDUINO_PIN);
     if (res == HIGH)
@@ -242,17 +295,51 @@ void loop() {
     else
       font_write(&font_hw_sign, 0,  0, "L");
 
-    res = digitalRead(BT2_BTN_ARDUINO_PIN);
+   res = digitalRead(BT2_MUTE_ARDUINO_PIN);
     if (res == HIGH)
       font_write(&font_hw_sign, 8,  0, "H");
     else
       font_write(&font_hw_sign, 8,  0, "L");
 
-    res = digitalRead(ENC_BTN_ARDUINO_PIN);
+   digitalWrite(AMP_MUTE_ARDUINO_PIN, res);
+
+    res = digitalRead(BT2_BTN_ARDUINO_PIN);
     if (res == HIGH)
       font_write(&font_hw_sign, 16,  0, "H");
     else
       font_write(&font_hw_sign, 16,  0, "L");
+
+    digitalWrite(AMP_MODE_ARDUINO_PIN, res);
+
+    res = digitalRead(ENC_BTN_ARDUINO_PIN);
+    if (res == HIGH)
+      font_write(&font_hw_sign, 24,  0, "H");
+    else
+      font_write(&font_hw_sign, 24,  0, "L");
+
+    button.update();
+    if (button.pressed())
+      res = HIGH;
+    else
+      res = LOW;
+    
+    /*if (res == HIGH)
+      font_write(&font_hw_sign, 32,  0, "H");
+    else
+      font_write(&font_hw_sign, 32,  0, "L");*/
+    font_write(&font_hw_sign, 32,  0, dim);
+
+    if (res == HIGH)
+      vfd_dim();
+  }
+
+  {
+    uint32_t cnt;
+    ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+      cnt = enc2_cnt;
+    }
+
+    font_write(&font_hw_sign, 38,  0, cnt);
   }
   
   vfd_sync();

@@ -56,13 +56,13 @@
 #define ENC2_A_PORT  PORTB
 #define ENC2_A_DDR   DDRB
 #define ENC2_A_PIN   PIN0
-#define ENC2_BTN_ARDUINO_PIN  53
+#define ENC2_A_ARDUINO_PIN  53
 
 #define ENC2_B_PORT  PORTB
 #define ENC2_B_DDR   DDRB
 #define ENC2_B_PIN   PIN1
 #define ENC2_B_PINS  PINB
-#define ENC2_BTN_ARDUINO_PIN  52
+#define ENC2_B_ARDUINO_PIN  52
 
 #define ENC2_BTN_PORT PORTB
 #define ENC2_BTN_DDR  DDRB
@@ -78,3 +78,9 @@
 #define BT2_BTN_DDR  DDRH
 #define BT2_BTN_PIN  PIN4
 #define BT2_BTN_ARDUINO_PIN  7
+
+#define AMP_MUTE_ARDUINO_PIN  10
+#define AMP_MODE_ARDUINO_PIN  9
+
+#define BT2_MUTE_ARDUINO_PIN  5
+#define BT3_DIM_ARDUINO_PIN  4

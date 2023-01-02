@@ -49,6 +49,22 @@ vfd_start(uint16_t pos, uint16_t size)
   vfd_send(HIGH_BYTE(size));
 }
 
+static uint8_t dim = 0x04;
+vfd_dim(void)
+{  
+#define STX 0x02
+#define HDR 0x44
+#define DAD 0x00
+#define CMD 0x58
+  if (--dim == 0)
+    dim = 0x04;
+  vfd_send(STX);
+  vfd_send(HDR);
+  vfd_send(DAD);
+  vfd_send(CMD);
+  vfd_send(dim);
+}
+
 /*
  * Clear all data.
  */
