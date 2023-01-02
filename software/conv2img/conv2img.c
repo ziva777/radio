@@ -13,11 +13,12 @@ typedef struct RGBA32
 
 static inline int is_visible(RGBA32 rgba)
 {
-	return (rgba.alpha != 0) &&
-			!(rgba.red == 0 && rgba.green == 0 && rgba.blue == 0);
+	return rgba.red != 0 || rgba.green != 0 || rgba.blue != 0;
+	//return (rgba.alpha != 0) ||
+	//		!(rgba.red == 0 && rgba.green == 0 && rgba.blue == 0);
 }
 
-static void fatal(char *msg)
+static inline void fatal(char *msg)
 {
 	fprintf(stderr, "error: %s\n", msg); 
 	exit(1);
@@ -26,7 +27,8 @@ static void fatal(char *msg)
 /*
  * Flip bits order in byte.
  */
-static inline uint8_t reverse_bits(uint8_t b) {
+static inline uint8_t reverse_bits(uint8_t b)
+{
 	b = (b & 0xF0) >> 4 | (b & 0x0F) << 4;
 	b = (b & 0xCC) >> 2 | (b & 0x33) << 2;
 	b = (b & 0xAA) >> 1 | (b & 0x55) << 1;
@@ -44,33 +46,22 @@ static inline uint8_t reverse_bits(uint8_t b) {
  */
 static uint8_t * byte_mask(FILE *fp, int width, int height)
 {
-	RGBA32		   *buf;
-	uint8_t		   *data;
+	RGBA32		   buf;
+	uint8_t		   *p1, *p2;
 	size_t			n;
-	int				i,
-					j;
+	size_t			n_bytes;
 
-	buf = malloc(width * sizeof(RGBA32));	/* read line by line */
-	data = malloc(width * height);
-	j = 0;
+	p1 = p2 = malloc(width * height);
+	n_bytes = 0;
 
-	while ((n = fread(buf, sizeof(RGBA32), width, fp)) != 0)
+	while ((n = fread(&buf, sizeof(buf), 1, fp)) != 0)
 	{
-		if (n != width)
-			fatal("invalid file dimention \"width\"");
-
-		if (j == height)
-			fatal("invalid file dimention \"height\"");
-
-		for (i = 0; i < width; ++i)
-			data[j*width + i] = is_visible(buf[i]);
-
-		j++;
+		*p2++ = is_visible(buf);
+		if (++n_bytes > (width * height))
+			fatal("invalid size specifyed");
 	}
 
-	free(buf);
-
-	return data;
+	return p1;
 }
 
 static void normalize_filename(char *filename, size_t size)
@@ -89,9 +80,7 @@ static void normalize_filename(char *filename, size_t size)
  */
 static void to_bitmat_mask(char *file, uint8_t *data, int width, int height)
 {
-	int				i,
-					j,
-					k;
+	int				i, j, k;
 	uint8_t			b;
 	FILE		   *fp;
 	char			filename[255];
@@ -110,21 +99,22 @@ static void to_bitmat_mask(char *file, uint8_t *data, int width, int height)
 
 	for (i = 0; i < width; ++i)
 	{
-		fprintf(fp, "\t");
-
-		for (j = 0; j < height; j += 8)
+		for (j = 0; j < height; j)
 		{
 			b = 0;
-
 			for (k = 0; k < 8; ++k)
-				//b |= (data[(j + k) * width + i]) << k;
-				if (data[(j + k) * width + i])
-					b |= 1 << k;
+			{
+				if (j * width + i < width * height)
+				{
+					if (data[j * width + i])
+						b |= 1 << k;
+				}
 
+				++j;
+			}
 			fprintf(fp, "0x%02X, ", reverse_bits(b));
 		}
-
-		fprintf(fp, "\t\n");
+		fprintf(fp, "\n");
 	}
 
 	fprintf(fp, "};");
@@ -132,36 +122,6 @@ static void to_bitmat_mask(char *file, uint8_t *data, int width, int height)
 	fclose(fp);
 	printf("File \"%s\" is created succesfully.\n", filename);
 }
-
-/*static void to_bitmat_mask(char *file, uint8_t *data, int width, int height)
-{
-	int				i,
-					j;
-
-	for (i = 0; i < width; ++i)
-	{
-		uint8_t		byte = 0;
-		int			byte_idx = 7;
-
-		for (j = 0; j < height; ++j)
-		{
-			if (data[j * width + i])
-				byte |= (1 << byte_idx);
-
-			if (byte_idx-- == 0)
-			{
-				printf("0x%02X, ", byte);
-				byte_idx = 7;
-				byte = 0;
-			}
-		}
-
-		if (byte_idx != 7)
-			printf("0x%02X, ", byte);
-
-		printf("\n");
-	}
-}*/
 
 /*
  * Process file
