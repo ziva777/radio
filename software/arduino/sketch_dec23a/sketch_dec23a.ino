@@ -109,7 +109,8 @@ inline void radio_setup(void) {
   delay(500);
   rx.setup(RESET_PIN, FM_FUNCTION);
   rx.setFM(8700, 10800, 8700, 10);
-  rx.setAutomaticGainControl(0, 26);
+//  rx.setAutomaticGainControl(0, 26);
+  rx.setAutomaticGainControl(0, 0);
   rx.setVolume(63);
 }
 
