@@ -1,0 +1,25 @@
+0 ICSigma100In1 O_C0_A0_P1_out Link18 O_C0_A0_P2_out Link19
+1 DCInpAlg1 O_C301_A0_P1_out Link1
+2 GPIAlg1 O_C319_A0_P1_out Link0
+3 RegReadAlgADCIn1 O_C383_A0_P1_out Link28
+4 RegReadAlgADCIn2 O_C530_A0_P1_out Link12
+5 RegReadAlgADCIn3 O_C532_A0_P1_out Link15
+6 DCInpAlg2 O_C550_A0_P1_out Link16
+7 DCInpAlg3 O_C554_A0_P1_out Link13
+8 DCInpAlg4 O_C347_A0_P1_out Link26
+9 DivisionAlgDB1 I_C335_A0_P1_in Link0 I_C335_A0_P2_in Link1 O_C335_A0_P3_out Link30
+10 MultAlg1 I_C590_A0_P1_in Link12 I_C590_A0_P2_in Link13 O_C590_A0_P3_out Link14
+11 MultAlg2 I_C594_A0_P1_in Link15 I_C594_A0_P2_in Link16 O_C594_A0_P3_out Link17
+12 EQ1940Single1 I_C610_A0_P1_in Link18 O_C610_A0_P2_out Link22
+13 EQ1940Single2 I_C613_A0_P1_in Link19 O_C613_A0_P2_out Link23
+14 MultAlg3 I_C353_A0_P1_in Link28 I_C353_A0_P2_in Link26 O_C353_A0_P3_out Link27
+15 LookupTableConfigOutFormatAlgNew1 I_C344_A0_P1_in Link27 O_C344_A0_P2_out Link29
+16 StereoIndexDemuxAlg1 I_C93_A0_P1_in Link30 I_C93_A0_P2_in Link22 I_C93_A0_P3_in Link23 O_C93_A0_P4_out Link6 O_C93_A0_P5_out Link7 O_C93_A0_P6_out Link2 O_C93_A0_P7_out Link4
+17 SingleBandSpkrEQAlgDP1 I_C15_A0_P1_in Link2 O_C15_A0_P2_out Link3
+18 SingleBandSpkrEQAlgDP2 I_C18_A0_P1_in Link4 O_C18_A0_P2_out Link5
+19 DCinputmux_stereo_Alg1 I_C40_A0_P3_in Link30 I_C40_A0_P4_in Link6 I_C40_A0_P5_in Link7 I_C40_A0_P6_in Link3 I_C40_A0_P7_in Link5 O_C40_A0_P1_out Link10 O_C40_A0_P2_out Link11
+20 ParamToneIndexwStepAlgFix1 I_C502_A0_P1_in Link14 I_C502_A0_P2_in Link10 I_C502_A0_P4_in Link11 O_C502_A0_P3_out Link8 O_C502_A0_P5_out Link9
+21 ParamToneIndexwStepAlgFix2 I_C508_A0_P1_in Link17 I_C508_A0_P2_in Link8 I_C508_A0_P4_in Link9 O_C508_A0_P3_out Link20 O_C508_A0_P5_out Link21
+22 ExtSWGainDB1 I_C368_A0_P1_in Link29 I_C368_A0_P2_in Link20 I_C368_A0_P4_in Link21 O_C368_A0_P3_out Link24 O_C368_A0_P5_out Link25
+23 ICSigma100Out1 I_C11_A0_P1_in Link24
+24 ICSigma100Out2 I_C13_A0_P1_in Link25
